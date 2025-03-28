@@ -1,0 +1,7 @@
+black
+datasets
+isort
+openai
+pandas
+tqdm
+python-dotenv
