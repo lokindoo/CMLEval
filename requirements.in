@@ -5,3 +5,6 @@ openai
 pandas
 tqdm
 python-dotenv
+groq
+huggingface_hub
+pyyaml
