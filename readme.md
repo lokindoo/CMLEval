@@ -4,19 +4,27 @@ This is a repository for the "Evaluating the cross- and multi-lingual capabiliti
 
 # Current progress
 
-So far, I have outlined the main evaluation methods, and have chosen several datasets which could be used to evaluate the LLMs. 
+So far, I have outlined the main evaluation methods, and have chosen several methods which could be used to evaluate the LLMs. 
 
-The datasets, in no particular order, are:
-1. Mr. TyDi - `https://github.com/castorini/mr.tydi?tab=readme-ov-file`
-2. CulturaX - `https://arxiv.org/abs/2309.09400`
-3. Aya dataset - `https://arxiv.org/abs/2402.06619`
+The main methods are:
+- Multiple Choice Question Answering (MCQA)
+- Correct Phrase Continuation (CPC)
 
-# TODO
+Other open-ended generation like Slot Filling may be used, but more preparation is needed.
+Generally, the methods will be combined with language augmentation techniques to create several versions of each task sample:
+(MCQA)
+- English question - X answers
+- X question - English answers
+- Mixed answers
+- X correct answer
 
-1. Test out translation of current datasets in preparation for cross-lingual capability testing
-    - test out NLLB / OPUS models for translating some samples
-    - test the translation quality via free LLM-as-a-judge candidates (groq?)
-    - evaluate actual translation quality and choose the best judge
-2. Translate a representative portion of the chosen datasets and assemble into first benchmark version
-    - human validation
-3. TBD
+The main metrics to evaluate each method are: 
+- MCQA - Exact Match, Precision, Accuracy, Cohen's Kappa 
+- CoCo-CoLa, Cossim / Cross-lingual Consistency 
+
+# Running evaluations
+
+To run LLM evaluations, install requirements, create a config.yaml file based on the example file, and run the `evaluate_llm.py` script with the following command in the root directory:
+```
+python -m scripts.evaluation.evaluate_llm --dataset-path "path\to\dataset.parquet.gzip" --output-file "path\to\output.json" --config-path "path\to\config.yaml"
+```
