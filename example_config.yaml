@@ -4,30 +4,26 @@
 # - name of the API key env variable if the model is API-based 
 # - model cache path if the model is to be run locally
 
-# - name: gpt-4o-mini
-#   api_key: OPENAI_KEY
-#   model_cache_path:
-
-# - name: meta-llama/Llama-3.2-3B-Instruct
-#   api_key:
-#   model_cache_path: C:\Users\nikol\OneDrive\Desktop\project_repos\CMLEval\models\Llama-3.2-3B-Instruct
+- name: llama3-8b-8192
+  api_key: GROQ_KEY
+  model_cache_path: 
 
 - name: llama3-70b-8192
   api_key: GROQ_KEY
   model_cache_path: 
 
-# - name: qwen-2.5-32b
-#   api_key: GROQ_KEY
-#   model_cache_path: 
+- name: qwen-qwq-32b
+  api_key: GROQ_KEY
+  model_cache_path: 
 
-# - name: gemma2-9b-it
-#   api_key: GROQ_KEY
-#   model_cache_path: 
+- name: gemma2-9b-it
+  api_key: GROQ_KEY
+  model_cache_path: 
 
-# - name: deepseek-r1-distill-qwen-32b
-#   api_key: GROQ_KEY
-#   model_cache_path: 
+- name: deepseek-r1-distill-llama-70b
+  api_key: GROQ_KEY
+  model_cache_path: 
 
-# - name: mistral-saba-24b
-#   api_key: GROQ_KEY
-#   model_cache_path: 
+- name: mistral-saba-24b
+  api_key: GROQ_KEY
+  model_cache_path: 
