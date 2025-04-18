@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 import pandas as pd
@@ -12,11 +12,12 @@ from huggingface_hub import login
 from tqdm import tqdm
 
 from ..utils.model_wrappers import LocalLLM, company2wrapper
-from ..utils.prompts import EVALUATION_PROMPT, create_eval_prompt
+from ..utils.prompts import EVALUATION_PROMPT, EXTRACT_PROMPT, create_eval_prompt
 
 load_dotenv()
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 GROQ_KEY = os.getenv("GROQ_KEY")
+EVAL_MODEL = os.getenv("EVAL_MODEL")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +39,7 @@ def evaluate_models(dataset, models):
     for i, sample in tqdm(
         dataset.iterrows(),
         desc="Testing chosen models...",
+        total=len(dataset),
         ncols=100,
     ):
         # Buffer time based on Groq API limits
@@ -75,13 +77,22 @@ def evaluate_models(dataset, models):
 )
 @click.option(
     "--dataset-interval",
+    required=False,
+    nargs=2,
+    type=int,
     help="Comma-separated indices for beginning and ending of the desired dataset interval.",
+)
+@click.option(
+    "--llm-answer-extract/--manual-answer-extract",
+    default=True,
+    help="Use calls to another LLM to extract the final choice of the LLMs you are evaluating.",
 )
 def main(
     dataset_path: str,
     output_file: str,
     config_path: str,
-    dataset_interval: Optional[str],
+    dataset_interval: Optional[Tuple[int]],
+    llm_answer_extract: Optional[bool],
 ):
 
     with open(config_path, "r") as file:
@@ -93,11 +104,7 @@ def main(
         )
 
     models = []
-    for model_dict in tqdm(
-        config,
-        desc="Config file found, loading models...",
-        ncols=100,
-    ):
+    for model_dict in config:
         logger.info(f"Loading model {model_dict.get('name')}")
         if cache_path := model_dict.get("model_cache_path"):
             login()
@@ -120,14 +127,33 @@ def main(
 
     dataset = pd.read_parquet(dataset_path)
     if dataset_interval:
-        s, e = dataset_interval.split(",")
-        dataset = dataset[int(s) : int(e)].copy()
+        s, e = dataset_interval
+        dataset = dataset[s:e].copy()
     results = evaluate_models(dataset, models)
 
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
     logger.info(f"Results saved to {output_file}")
+
+    if llm_answer_extract:
+        logger.info("Extracting final option from LLM output.")
+        api_wrapper = company2wrapper.get("GROQ")
+        extractor = api_wrapper(
+            name=EVAL_MODEL,
+            api_key=eval("GROQ_KEY"),
+        )
+
+        for model in results.keys():
+            logger.info(f"Model {model}")
+            for d in tqdm(results[model], total=len(results[model]), ncols=100):
+                prompt = EXTRACT_PROMPT.format(explanation=d["output"])
+                extracted_answer = extractor.predict(prompt)
+                extracted_answer = extracted_answer.removeprefix("FinalAnswer:").strip()
+                d["extracted_answer"] = extracted_answer
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
 
 
 if __name__ == "__main__":
