@@ -19,8 +19,10 @@ Generally, the methods will be combined with language augmentation techniques to
 - X correct answer
 
 The main metrics to evaluate each method are: 
-- MCQA - Exact Match, Precision, Accuracy, Cohen's Kappa 
+- MCQA - Precision, Accuracy, Cohen's Kappa 
 - CoCo-CoLa, Cossim / Cross-lingual Consistency 
+
+The evaluation prompt so far has included CoT based on the intuition that CoT generally improves results. Tests without CoT need to be conducted to prove this theory in the cross- multilingual context.
 
 # Running evaluations
 
