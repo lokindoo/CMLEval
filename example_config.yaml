@@ -27,3 +27,7 @@
 - name: mistral-saba-24b
   api_key: GROQ_KEY
   model_cache_path: 
+
+# - name: neulab/Pangea-7B
+#   api_key: 
+#   model_cache_path: C:\Users\nikol\OneDrive\Desktop\project_repos\CMLEval\models

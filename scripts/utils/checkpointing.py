@@ -1,0 +1,26 @@
+import pickle
+from pathlib import Path
+from typing import Dict, Tuple
+
+
+def load_checkpoint(output_file: str) -> Tuple:
+    """Loads the checkpointed results_dict and last_processed_index if present."""
+    pkl = Path(output_file).with_suffix(".checkpoint.pickle")
+    idx_file = Path(output_file).with_suffix(".checkpoint.idx")
+    if pkl.exists() and idx_file.exists():
+        with open(pkl, "rb") as h:
+            results = pickle.load(h)
+        with open(idx_file, "r") as f:
+            last_idx = int(f.read().strip())
+        return results, last_idx
+    return None, 0
+
+
+def save_checkpoint(results: Dict, output_file: str, last_idx: int):
+    """Dump results and last index processed."""
+    pkl = Path(output_file).with_suffix(".checkpoint.pickle")
+    idx_file = Path(output_file).with_suffix(".checkpoint.idx")
+    with open(pkl, "wb") as h:
+        pickle.dump(results, h, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(idx_file, "w") as f:
+        f.write(str(last_idx))
