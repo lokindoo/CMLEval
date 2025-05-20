@@ -74,6 +74,13 @@ Options:
 {options}
 Answer:"""
 
+# default short answer prompt
+EVALUATION_PROMPT_GENQA = """Look at the question, think about it, and write a short answer to it.
+Write out your thought process, and in the end, put the correct short answer in square brackets: [steak and fries], [football], etc.
+
+Question: {question}
+Answer:"""
+
 EVALUATION_PROMPT_DICT = {
     "0": EVALUATION_PROMPT_0,
     "1": EVALUATION_PROMPT_1,
