@@ -74,9 +74,15 @@ Options:
 {options}
 Answer:"""
 
+
+EVALUATION_GENQA_SYS_PROMPT = (
+    """You are an expert at answering short-answer questions."""
+)
+
 # default short answer prompt
-EVALUATION_PROMPT_GENQA = """Look at the question, think about it, and write a short answer to it.
+EVALUATION_GENQA_PROMPT = """Look at the question, think about it, and write a short answer to it.
 Write out your thought process, and in the end, put the correct short answer in square brackets: [steak and fries], [football], etc.
+Answer in {answer_language}.
 
 Question: {question}
 Answer:"""

@@ -1,10 +1,12 @@
+accelerate
+bitsandbytes
 black
 datasets
+groq
+huggingface_hub
 isort
 openai
 pandas
-tqdm
 python-dotenv
-groq
-huggingface_hub
 pyyaml
+tqdm

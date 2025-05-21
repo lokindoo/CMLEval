@@ -1,9 +1,10 @@
 import logging
 
 import requests
+import torch
 from groq import Groq
 from openai import OpenAI
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from ..utils.prompts import EVALUATION_SYS_PROMPT
 
@@ -14,18 +15,42 @@ class BaseLLM:
 
 
 class LocalLLM(BaseLLM):
-    def __init__(self, full_name, cache_path):
+    def __init__(self, full_name: str, cache_path: str, quant: str = "int8"):
+        """
+        quant is int8 by default, but can be removed or changed
+        """
         super().__init__(full_name.split("/")[-1])
-        self.tokenizer = AutoTokenizer.from_pretrained(full_name, cache_dir=cache_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            full_name,
+            cache_dir=cache_path,
+            use_fast=True,
+        )
+
+        model_kwargs = {
+            "cache_dir": cache_path,
+            "device_map": "auto",
+        }
+
+        if quant == "int8":
+            model_kwargs["load_in_8bit"] = True
+
+        elif quant == "int4":
+            qb_conf = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+            )
+            model_kwargs["quantization_config"] = qb_conf
+
         self.model = AutoModelForCausalLM.from_pretrained(
-            full_name, cache_dir=cache_path
+            full_name,
+            **model_kwargs,
         )
 
     def predict(self, prompt):
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        outputs = self.model.generate(**inputs, max_length=200)
-        result = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return result
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        outputs = self.model.generate(**inputs, max_length=2000)
+        return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 
 class OpenAILLM(BaseLLM):
