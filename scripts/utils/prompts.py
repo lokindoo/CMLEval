@@ -15,10 +15,12 @@ Evaluation: YES if the marked answer is correct, NO if incorrect
 Explanation: Brief explanation of why"""
 
 # Evaluation
-EVALUATION_SYS_PROMPT = """You are an expert at answering multiple-choice questions."""
+EVALUATION_MCQA_SYS_PROMPT = (
+    """You are an expert at answering multiple-choice questions."""
+)
 
 # 0-shot default prompt
-EVALUATION_PROMPT_0 = """Look at the question, think about it, and choose the correct answer from the ones given to you.
+EVALUATION_MCQA_PROMPT_0 = """Look at the question, think about it, and choose the correct answer from the ones given to you.
 Write out your thought process, and in the end, put the correct answer as a latin uppercase letter in square brackets: [A], [B], etc.
 One of these options is the correct answer.
 
@@ -28,7 +30,7 @@ Options:
 Answer:"""
 
 # 1-shot using question no. 106 from kazakh dataset
-EVALUATION_PROMPT_1 = """Look at the question, think about it, and choose the correct answer from the ones given to you.
+EVALUATION_MCQA_PROMPT_1 = """Look at the question, think about it, and choose the correct answer from the ones given to you.
 Write out your thought process, and in the end, put the correct answer as a latin uppercase letter in square brackets: [A], [B], etc.
 One of these options is the correct answer.
 
@@ -47,7 +49,7 @@ Options:
 Answer:"""
 
 # 2-shot using questions no. 106 & no. 179 from kazakh dataset
-EVALUATION_PROMPT_2 = """Look at the question, think about it, and choose the correct answer from the ones given to you.
+EVALUATION_MCQA_PROMPT_2 = """Look at the question, think about it, and choose the correct answer from the ones given to you.
 Write out your thought process, and in the end, put the correct answer as a latin uppercase letter in square brackets: [A], [B], etc.
 One of these options is the correct answer.
 
@@ -87,36 +89,66 @@ Answer in {answer_language}.
 Question: {question}
 Answer:"""
 
-EVALUATION_PROMPT_DICT = {
-    "0": EVALUATION_PROMPT_0,
-    "1": EVALUATION_PROMPT_1,
-    "2": EVALUATION_PROMPT_2,
+EVALUATION_SYS_PROMPT_DICT = {
+    "MCQA": EVALUATION_MCQA_SYS_PROMPT,
+    "GenQA": EVALUATION_GENQA_SYS_PROMPT,
+}
+
+EVALUATION_MCQA_PROMPT_DICT = {
+    "0": EVALUATION_MCQA_PROMPT_0,
+    "1": EVALUATION_MCQA_PROMPT_1,
+    "2": EVALUATION_MCQA_PROMPT_2,
 }
 
 
-def create_eval_prompt(row: pd.Series, prompt: str) -> str:
+def create_eval_prompt(row: pd.Series, prompt: str, qa_type: str) -> str:
     question = row["Question"]
-    options = [
-        row["Option A"],
-        row["Option B"],
-        row["Option C"],
-        row["Option D"],
-        row["Option E"],
-    ]
-    options = [o for o in options if o]
-    options = "\n".join([f"{chr(65 + i)}. {o}".strip() for i, o in enumerate(options)])
-    return prompt.format(question=question, options=options)
+    if qa_type == "MCQA":
+        options = [
+            row["Option A"],
+            row["Option B"],
+            row["Option C"],
+            row["Option D"],
+            row["Option E"],
+        ]
+        options = [o for o in options if o]
+        options = "\n".join(
+            [f"{chr(65 + i)}. {o}".strip() for i, o in enumerate(options)]
+        )
+        return prompt.format(question=question, options=options)
+    else:
+        if row["Direction"] == "en_answer":
+            answer_language = "English"
+        else:
+            answer_language = row["Language"]
+        return prompt.format(question=question, answer_language=answer_language)
 
 
-# Extraction
-EXTRACT_PROMPT = """You are an expert at extracting a specific final answer from a long explanation. Analyse the explanation given, and select the final answer it comes to.
+EXTRACT_MCQA_PROMPT = """You are an expert at extracting a specific final answer from a long explanation. Analyse the explanation given, and select the final answer it comes to.
 The answer must be a single capital Latin letter: A, B, C, D, E.
 You must write only the answer, do not write anything else.
 If no single Latin letter can be found as the answer, write "None".
 
 Example:
-Explanation: "...'ythological", doesn\'t make sense in this context, as it\'s not a cellular component.\n\nOption B, "Lissoma", is not a familiar term in cell biology.\n\nOption C, "The center", is a bit vague, but it could be referring to the center of the cell, which is where the nucleus is located. However, the nucleus isn\'t typically associated with generating power for the cell.\n\nOption D, "Chloroplasts", is a type of organelle found in plant cells that is responsible for photosynthesis, which is the process of generating energy from light. This sounds like a good fit for the "Power station" description.\n\nOption E, "The kernel", is a term that\'s not commonly used in cell biology, and it doesn\'t seem to fit the description.\n\nBased on my analysis, I\'m going to choose option D, Chloroplasts.\n\n[Answer: D]'"
+Explanation: "...ythological", doesn\'t make sense in this context, as it\'s not a cellular component.\n\nOption B, "Lissoma", is not a familiar term in cell biology.\n\nOption C, "The center", is a bit vague, but it could be referring to the center of the cell, which is where the nucleus is located. However, the nucleus isn\'t typically associated with generating power for the cell.\n\nOption D, "Chloroplasts", is a type of organelle found in plant cells that is responsible for photosynthesis, which is the process of generating energy from light. This sounds like a good fit for the "Power station" description.\n\nOption E, "The kernel", is a term that\'s not commonly used in cell biology, and it doesn\'t seem to fit the description.\n\nBased on my analysis, I\'m going to choose option D, Chloroplasts.\n\n[Answer: D]"
 FinalAnswer: D
 
 Explanation: {explanation}
 FinalAnswer:"""
+
+EXTRACT_GENQA_PROMPT = """You are an expert at extracting a specific short answer from a long explanation. Analyse the explanation given, and select the final answer it comes to.
+The answer must be a short text enclosed in square brackets [].
+You must write only the answer text, do not write anything else.
+If no answer can be found, write "None".
+
+Example:
+Explanation: "...y. A sweet pastry or croissant with a glass of milk or tea is also common in Algerian households.\n\nThese snacks are practical, quick to prepare, and accessible, aligning with typical breakfast or pre-school snack habits in Algerian culture.\n\nCorrect short answer: [bread with jam or chocolate spread]"
+FinalAnswer: bread with jam or chocolate spread
+
+Explanation: {explanation}
+FinalAnswer:"""
+
+EXTRACT_PROMPT_DICT = {
+    "MCQA": EXTRACT_MCQA_PROMPT,
+    "GenQA": EXTRACT_GENQA_PROMPT,
+}

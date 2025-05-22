@@ -13,13 +13,16 @@ from tqdm import tqdm
 
 from ..utils.checkpointing import load_checkpoint, save_checkpoint
 from ..utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
-from ..utils.parsers import parse_llm_answer
-from ..utils.prompts import EVALUATION_PROMPT_DICT, EXTRACT_PROMPT, create_eval_prompt
+from ..utils.parsers import extract_answers_with_llm, extract_answers_with_rules
+from ..utils.prompts import (
+    EVALUATION_GENQA_PROMPT,
+    EVALUATION_MCQA_PROMPT_DICT,
+    create_eval_prompt,
+)
 
 load_dotenv()
-OPENAI_KEY = os.getenv("OPENAI_KEY")
-GROQ_KEY = os.getenv("GROQ_KEY")
-EVAL_MODEL = os.getenv("EVAL_MODEL")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,10 +39,14 @@ def evaluate_models(
     models: List[BaseLLM],
     results: Dict,
     fewshot: str,
+    qa_type: str,
     output_file: str,
     start_index: int,
 ) -> Dict:
-    eval_prompt = EVALUATION_PROMPT_DICT[fewshot]
+    if qa_type == "MCQA":
+        eval_prompt = EVALUATION_MCQA_PROMPT_DICT[fewshot]
+    else:
+        eval_prompt = EVALUATION_GENQA_PROMPT
     logger.info(f"Doing {fewshot}-shot eval. Using prompt:\n{eval_prompt}")
 
     for i, sample in tqdm(
@@ -50,7 +57,7 @@ def evaluate_models(
     ):
         # Approximate buffer time based on Groq API limits
         # time.sleep(6)
-        prompt = create_eval_prompt(sample, eval_prompt)
+        prompt = create_eval_prompt(sample, eval_prompt, qa_type)
         for model in models:
             try:
                 output = model.predict(prompt)
@@ -59,6 +66,8 @@ def evaluate_models(
                         "prompt": prompt,
                         "output": output,
                         "ground_truth": sample["marked_answer"],
+                        "Language": sample["Language"],
+                        "Direction": sample["Direction"],
                     }
                 )
             except Exception as e:
@@ -68,49 +77,12 @@ def evaluate_models(
                         "prompt": prompt,
                         "output": "",
                         "ground_truth": "",
+                        "Language": sample["Language"],
+                        "Direction": sample["Direction"],
                     }
                 )
         if i != 0 and i % 10 == 0:
             save_checkpoint(results, output_file, start_index + i + 1)
-
-
-def extract_answers_with_rules(results: Dict) -> Dict:
-    logger.info("Extracting final option from LLM output using rules.")
-    for model in results.keys():
-        logger.info(f"Model {model}\n")
-        for d in tqdm(results[model], total=len(results[model]), ncols=100):
-            if d["output"]:
-                d["extracted_answer"] = parse_llm_answer(long_answer=d["output"])
-
-
-def extract_answers_with_llm(results: Dict, test: bool) -> Dict:
-    logger.info("Extracting final option from LLM output using LLM.")
-    api_wrapper = company2wrapper.get("GROQ")
-    extractor = api_wrapper(
-        name=EVAL_MODEL,
-        api_key=GROQ_KEY,
-    )
-
-    for model in results.keys():
-        logger.info(f"Model {model}")
-        for d in tqdm(results[model], total=len(results[model]), ncols=100):
-            if not d["output"]:
-                d["extracted_answer"] = ""
-            else:
-                if not d["extracted_answer"]:
-                    # Approximate buffer time based on Groq API limits
-                    # time.sleep(6)
-                    explanation = "..." + d["output"][len(d["output"]) - 300 :]
-                    prompt = EXTRACT_PROMPT.format(explanation=explanation)
-                    extracted_answer = extractor.predict(prompt)
-                    d["extracted_answer"] = extracted_answer.split("FinalAnswer:")[
-                        -1
-                    ].strip()
-                    if test:
-                        d["extracted_with_llm"] = True
-                else:
-                    if test:
-                        d["extracted_with_llm"] = False
 
 
 @click.command()
@@ -145,8 +117,6 @@ def main(
     fewshot: str,
     test: bool,
 ):
-    logger.info(f"Using dataset {Path(dataset_path).stem}")
-
     with open(config_path, "r") as file:
         stream = file.read()
     config = yaml.safe_load(stream)
@@ -154,6 +124,11 @@ def main(
         raise Exception(
             "No models indicated. Check the config file and re-run script with at least 1 model."
         )
+
+    # TODO: change when using multiple datasets at once
+    qa_type = Path(dataset_path).parts[-2]
+    if qa_type not in ["MCQA", "GenQA"]:
+        raise Exception("Only MCQA and GenQA datasets supported!")
 
     models = []
     for model_dict in config:
@@ -164,6 +139,7 @@ def main(
                 LocalLLM(
                     full_name=model_dict.get("name"),
                     cache_path=cache_path,
+                    qa_type=qa_type,
                 )
             )
         else:
@@ -174,10 +150,12 @@ def main(
                 api_wrapper(
                     name=model_dict.get("name"),
                     api_key=eval(api_key),
+                    qa_type=qa_type,
                 )
             )
 
     # TODO: add interaction with several datasets at once
+    logger.info(f"Using dataset {Path(dataset_path).stem}")
     results, start_idx = load_checkpoint(output_file)
     if results is None:
         results = {m.name: [] for m in models}
@@ -187,17 +165,16 @@ def main(
     df = pd.read_parquet(dataset_path)
     df = df.iloc[start_idx:].reset_index(drop=True)
 
-    evaluate_models(df, models, results, fewshot, output_file, start_idx)
-    extract_answers_with_rules(results)
-
-    # with open(output_file, "r", encoding="utf-8") as f:
-    #     results = json.load(f)
+    evaluate_models(df, models, results, fewshot, qa_type, output_file, start_idx)
+    logger.info("Extracting final option from LLM output using rules.")
+    extract_answers_with_rules(results, qa_type)
 
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 
     if llm_answer_extract:
-        extract_answers_with_llm(results, test)
+        logger.info("Extracting final option from LLM output using LLM.")
+        extract_answers_with_llm(results, qa_type, test)
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
 

@@ -6,7 +6,7 @@ from groq import Groq
 from openai import OpenAI
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-from ..utils.prompts import EVALUATION_SYS_PROMPT
+from ..utils.prompts import EVALUATION_SYS_PROMPT_DICT
 
 
 class BaseLLM:
@@ -15,7 +15,9 @@ class BaseLLM:
 
 
 class LocalLLM(BaseLLM):
-    def __init__(self, full_name: str, cache_path: str, quant: str = "int8"):
+    def __init__(
+        self, full_name: str, cache_path: str, qa_type: str, quant: str = "int8"
+    ):
         """
         quant is int8 by default, but can be removed or changed
         """
@@ -26,9 +28,12 @@ class LocalLLM(BaseLLM):
             use_fast=True,
         )
 
+        self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
+
         model_kwargs = {
             "cache_dir": cache_path,
             "device_map": "auto",
+            "local_files_only": True,
         }
 
         if quant == "int8":
@@ -48,16 +53,19 @@ class LocalLLM(BaseLLM):
         )
 
     def predict(self, prompt):
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(
+            self.sys_prompt + "\n" + prompt, return_tensors="pt"
+        ).to(self.model.device)
         outputs = self.model.generate(**inputs, max_length=2000)
         return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 
 class OpenAILLM(BaseLLM):
-    def __init__(self, name: str, api_key: str):
+    def __init__(self, name: str, api_key: str, qa_type: str):
         super().__init__(name)
         self.model = name
         self.client = OpenAI(api_key=api_key)
+        self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
 
     def predict(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
@@ -65,7 +73,7 @@ class OpenAILLM(BaseLLM):
             messages=[
                 {
                     "role": "system",
-                    "content": EVALUATION_SYS_PROMPT,
+                    "content": self.sys_prompt,
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -75,10 +83,11 @@ class OpenAILLM(BaseLLM):
 
 
 class GroqLLM(BaseLLM):
-    def __init__(self, name: str, api_key: str):
+    def __init__(self, name: str, api_key: str, qa_type: str):
         super().__init__(name)
         self.model = name
         self.client = Groq(api_key=api_key)
+        self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
 
     def predict(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
@@ -86,7 +95,7 @@ class GroqLLM(BaseLLM):
             messages=[
                 {
                     "role": "system",
-                    "content": EVALUATION_SYS_PROMPT,
+                    "content": self.sys_prompt,
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -96,16 +105,17 @@ class GroqLLM(BaseLLM):
 
 
 class RemoteLLM(BaseLLM):
-    def __init__(self, name, endpoint, api_key=None):
+    def __init__(self, name: str, endpoint: str, qa_type: str, api_key=None):
         super().__init__(name)
         self.endpoint = endpoint
+        self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
         self.api_key = api_key
 
     def predict(self, prompt):
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        payload = {"prompt": prompt}
+        payload = {"prompt": self.sys_prompt + "\n" + prompt}
         try:
             response = requests.post(self.endpoint, headers=headers, json=payload)
             response.raise_for_status()
