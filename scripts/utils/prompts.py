@@ -81,10 +81,10 @@ EVALUATION_GENQA_SYS_PROMPT = (
     """You are an expert at answering short-answer questions."""
 )
 
-# default short answer prompt
+# default short answer prompt using 1 random English, 1 random Sundanese, and 1 random Arabic example
 EVALUATION_GENQA_PROMPT = """Look at the question, think about it, and write a short answer to it.
-Write out your thought process, and in the end, put the correct short answer in square brackets: [steak and fries], [football], etc.
-Answer in {answer_language}.
+Write out your thought process, and in the end, put the correct short answer in square brackets: [steak and fries], [كرة القدم], [taman umum], etc.
+Make sure the short answer is in {answer_language} only.
 
 Question: {question}
 Answer:"""

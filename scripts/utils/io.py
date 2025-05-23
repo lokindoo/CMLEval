@@ -1,6 +1,9 @@
+import json
 import pickle
 from pathlib import Path
 from typing import Dict, Tuple
+
+import pandas as pd
 
 
 def load_checkpoint(output_file: str) -> Tuple:
@@ -24,3 +27,15 @@ def save_checkpoint(results: Dict, output_file: str, last_idx: int):
         pickle.dump(results, h, protocol=pickle.HIGHEST_PROTOCOL)
     with open(idx_file, "w") as f:
         f.write(str(last_idx))
+
+
+def save_df(dataframe: pd.DataFrame, path: str):
+    if path.endswith(".json"):
+        dataframe.to_json(path, force_ascii=False, indent=2, orient="records")
+    elif path.endswith(".parquet.gzip"):
+        dataframe.to_parquet(path, index=False, compression="gzip")
+
+
+def load_json(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)

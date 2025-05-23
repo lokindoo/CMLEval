@@ -1,12 +1,12 @@
 accelerate
 bitsandbytes
-black
 datasets
 groq
 huggingface_hub
-isort
 openai
 pandas
 python-dotenv
 pyyaml
+torch
+transformers
 tqdm

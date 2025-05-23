@@ -4,9 +4,8 @@ from typing import Dict, Tuple
 
 from dotenv import load_dotenv
 from tqdm import tqdm
-
-from ..utils.model_wrappers import company2wrapper
-from ..utils.prompts import EXTRACT_PROMPT_DICT
+from utils.model_wrappers import company2wrapper
+from utils.prompts import EXTRACT_PROMPT_DICT
 
 load_dotenv()
 EVAL_MODEL = os.getenv("EVAL_MODEL")
@@ -71,8 +70,11 @@ def extract_answers_with_rules(results: Dict, qa_type: str) -> Dict:
         patterns = genqa_patterns
     for model in results.keys():
         for d in tqdm(results[model], total=len(results[model]), ncols=100):
-            if d["output"]:
-                d["extracted_answer"] = parse_llm_answer(d["output"], patterns)
+            if not d["output"]:
+                d["extracted_answer"] = ""
+            else:
+                if not d.get("extracted_answer"):
+                    d["extracted_answer"] = parse_llm_answer(d["output"], patterns)
 
 
 def extract_answers_with_llm(results: Dict, qa_type: str, test: bool) -> Dict:
@@ -80,6 +82,7 @@ def extract_answers_with_llm(results: Dict, qa_type: str, test: bool) -> Dict:
     extractor = api_wrapper(
         name=EVAL_MODEL,
         api_key=GROQ_API_KEY,
+        qa_type=qa_type,
     )
 
     extract_prompt = EXTRACT_PROMPT_DICT[qa_type]
@@ -89,10 +92,10 @@ def extract_answers_with_llm(results: Dict, qa_type: str, test: bool) -> Dict:
             if not d["output"]:
                 d["extracted_answer"] = ""
             else:
-                if not d["extracted_answer"]:
+                if not d.get("extracted_answer"):
                     explanation = "..." + d["output"][len(d["output"]) - 300 :]
                     prompt = extract_prompt.format(explanation=explanation)
-                    # Approximate buffer time based on Groq API limits
+                    # Approximate buffer time based on Free Tier Groq API limits
                     # time.sleep(6)
                     extracted_answer = extractor.predict(prompt)
                     d["extracted_answer"] = extracted_answer.split("FinalAnswer:")[

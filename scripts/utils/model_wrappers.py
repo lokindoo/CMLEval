@@ -5,8 +5,7 @@ import torch
 from groq import Groq
 from openai import OpenAI
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-
-from ..utils.prompts import EVALUATION_SYS_PROMPT_DICT
+from utils.prompts import EVALUATION_SYS_PROMPT_DICT
 
 
 class BaseLLM:

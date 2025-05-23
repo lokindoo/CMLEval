@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -10,11 +11,11 @@ import yaml
 from dotenv import load_dotenv
 from huggingface_hub import login
 from tqdm import tqdm
-
-from ..utils.checkpointing import load_checkpoint, save_checkpoint
-from ..utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
-from ..utils.parsers import extract_answers_with_llm, extract_answers_with_rules
-from ..utils.prompts import (
+from utils.dataframe_utils import dict_to_df
+from utils.io import load_checkpoint, save_checkpoint, save_df
+from utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
+from utils.parsers import extract_answers_with_llm, extract_answers_with_rules
+from utils.prompts import (
     EVALUATION_GENQA_PROMPT,
     EVALUATION_MCQA_PROMPT_DICT,
     create_eval_prompt,
@@ -47,7 +48,8 @@ def evaluate_models(
         eval_prompt = EVALUATION_MCQA_PROMPT_DICT[fewshot]
     else:
         eval_prompt = EVALUATION_GENQA_PROMPT
-    logger.info(f"Doing {fewshot}-shot eval. Using prompt:\n{eval_prompt}")
+    logger.info(f"FEWSHOT | {fewshot}-shot")
+    logger.info(f"PROMPT |\n{eval_prompt}")
 
     for i, sample in tqdm(
         dataset.iterrows(),
@@ -55,32 +57,34 @@ def evaluate_models(
         total=len(dataset),
         ncols=100,
     ):
-        # Approximate buffer time based on Groq API limits
+        # Approximate buffer time based on Free Tier Groq API limits
         # time.sleep(6)
         prompt = create_eval_prompt(sample, eval_prompt, qa_type)
         for model in models:
-            try:
-                output = model.predict(prompt)
-                results[model.name].append(
-                    {
-                        "prompt": prompt,
-                        "output": output,
-                        "ground_truth": sample["marked_answer"],
-                        "Language": sample["Language"],
-                        "Direction": sample["Direction"],
-                    }
-                )
-            except Exception as e:
-                print(f"Error with model {model.name}: {e}")
-                results[model.name].append(
-                    {
-                        "prompt": prompt,
-                        "output": "",
-                        "ground_truth": "",
-                        "Language": sample["Language"],
-                        "Direction": sample["Direction"],
-                    }
-                )
+            output = ""
+            for attempt in range(3):
+                try:
+                    output = model.predict(prompt)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        logger.info(
+                            f"ERROR | {i} | {model.name}: {e}. Retry attempt {attempt+1}"
+                        )
+                        time.sleep(1)
+                        continue
+                    else:
+                        logger.info(f"FAILED | {i} | {model.name}: {e}")
+            results[model.name].append(
+                {
+                    "output": output,
+                    "ground_truth": sample["ground_truth"],
+                    "Language": sample["Language"],
+                    "Direction": sample["Direction"],
+                    "prompt": prompt,
+                }
+            )
+
         if i != 0 and i % 10 == 0:
             save_checkpoint(results, output_file, start_index + i + 1)
 
@@ -126,13 +130,13 @@ def main(
         )
 
     # TODO: change when using multiple datasets at once
-    qa_type = Path(dataset_path).parts[-2]
+    qa_type = Path(dataset_path).parent.name
     if qa_type not in ["MCQA", "GenQA"]:
         raise Exception("Only MCQA and GenQA datasets supported!")
 
     models = []
     for model_dict in config:
-        logger.info(f"Loading model {model_dict.get('name')}")
+        logger.info(f"LOADING | {model_dict.get('name')}")
         if cache_path := model_dict.get("model_cache_path"):
             login()
             models.append(
@@ -155,28 +159,35 @@ def main(
             )
 
     # TODO: add interaction with several datasets at once
-    logger.info(f"Using dataset {Path(dataset_path).stem}")
+    logger.info(f"DATASET | {Path(dataset_path).with_suffix("").stem}")
     results, start_idx = load_checkpoint(output_file)
     if results is None:
         results = {m.name: [] for m in models}
     else:
-        logger.info(f"Resuming processing from record {start_idx}")
+        logger.info(f"RESUMING FROM | {start_idx}")
 
     df = pd.read_parquet(dataset_path)
     df = df.iloc[start_idx:].reset_index(drop=True)
 
     evaluate_models(df, models, results, fewshot, qa_type, output_file, start_idx)
     logger.info("Extracting final option from LLM output using rules.")
+    # TODO: re-write to work with df instead of dict
     extract_answers_with_rules(results, qa_type)
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+    save_df(
+        dict_to_df(results),
+        output_file,
+    )
 
     if llm_answer_extract:
         logger.info("Extracting final option from LLM output using LLM.")
+        # TODO: re-write to work with df instead of dict
         extract_answers_with_llm(results, qa_type, test)
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+
+        save_df(
+            dict_to_df(results),
+            output_file,
+        )
 
     # TODO: delete idx and checkpoint after everything is done and saved
 
