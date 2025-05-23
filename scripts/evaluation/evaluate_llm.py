@@ -134,11 +134,11 @@ def main(
     if qa_type not in ["MCQA", "GenQA"]:
         raise Exception("Only MCQA and GenQA datasets supported!")
 
+    login(os.getenv("HF_TOKEN"))
     models = []
     for model_dict in config:
         logger.info(f"LOADING | {model_dict.get('name')}")
         if cache_path := model_dict.get("model_cache_path"):
-            login()
             models.append(
                 LocalLLM(
                     full_name=model_dict.get("name"),
