@@ -1,3 +1,5 @@
+-r requirements_pytorch.in
+
 accelerate
 bitsandbytes
 datasets
@@ -7,6 +9,5 @@ openai
 pandas
 python-dotenv
 pyyaml
-torch
 transformers
 tqdm
