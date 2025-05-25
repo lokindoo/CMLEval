@@ -2,6 +2,7 @@
 
 accelerate
 bitsandbytes
+click
 datasets
 groq
 huggingface_hub
