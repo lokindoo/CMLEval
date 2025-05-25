@@ -11,11 +11,11 @@ import yaml
 from dotenv import load_dotenv
 from huggingface_hub import login
 from tqdm import tqdm
-from utils.dataframe_utils import dict_to_df
-from utils.io import load_checkpoint, save_checkpoint, save_df
-from utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
-from utils.parsers import extract_answers_with_llm, extract_answers_with_rules
-from utils.prompts import (
+from scripts.utils.dataframe_utils import dict_to_df
+from scripts.utils.io import load_checkpoint, save_checkpoint, save_df
+from scripts.utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
+from scripts.utils.parsers import extract_answers_with_llm, extract_answers_with_rules
+from scripts.utils.prompts import (
     EVALUATION_GENQA_PROMPT,
     EVALUATION_MCQA_PROMPT_DICT,
     create_eval_prompt,

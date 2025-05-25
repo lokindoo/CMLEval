@@ -8,6 +8,7 @@ import pandas as pd
 
 def load_checkpoint(output_file: str) -> Tuple:
     """Loads the checkpointed results_dict and last_processed_index if present."""
+    output_file = output_file.split(".")[0]
     pkl = Path(output_file).with_suffix(".checkpoint.pickle")
     idx_file = Path(output_file).with_suffix(".checkpoint.idx")
     if pkl.exists() and idx_file.exists():
@@ -21,6 +22,7 @@ def load_checkpoint(output_file: str) -> Tuple:
 
 def save_checkpoint(results: Dict, output_file: str, last_idx: int):
     """Dump results and last index processed."""
+    output_file = output_file.split(".")[0]
     pkl = Path(output_file).with_suffix(".checkpoint.pickle")
     idx_file = Path(output_file).with_suffix(".checkpoint.idx")
     with open(pkl, "wb") as h:

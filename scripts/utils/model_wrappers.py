@@ -5,7 +5,7 @@ import torch
 from groq import Groq
 from openai import OpenAI
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from utils.prompts import EVALUATION_SYS_PROMPT_DICT
+from scripts.utils.prompts import EVALUATION_SYS_PROMPT_DICT
 
 
 class BaseLLM:
@@ -29,22 +29,28 @@ class LocalLLM(BaseLLM):
 
         self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
 
+        if quant not in (None, "int8", "int4"):
+            raise ValueError("quant must be None, 'int8', or 'int4'")
+        bnb_cfg = None
+        if quant == "int8":
+            bnb_cfg = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_enable_fp32_cpu_offload=True
+            )
+        elif quant == "int4":
+            bnb_cfg = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+            )
+
         model_kwargs = {
             "cache_dir": cache_path,
             "device_map": "auto",
-            "local_files_only": True,
         }
-
-        if quant == "int8":
-            model_kwargs["load_in_8bit"] = True
-
-        elif quant == "int4":
-            qb_conf = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
-            )
-            model_kwargs["quantization_config"] = qb_conf
+        if bnb_cfg is not None:
+            model_kwargs["quantization_config"] = bnb_cfg
 
         self.model = AutoModelForCausalLM.from_pretrained(
             full_name,
