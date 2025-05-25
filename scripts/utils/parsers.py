@@ -4,8 +4,8 @@ from typing import Dict, Tuple
 
 from dotenv import load_dotenv
 from tqdm import tqdm
-from utils.model_wrappers import company2wrapper
-from utils.prompts import EXTRACT_PROMPT_DICT
+from scripts.utils.model_wrappers import company2wrapper
+from scripts.utils.prompts import EXTRACT_PROMPT_DICT
 
 load_dotenv()
 EVAL_MODEL = os.getenv("EVAL_MODEL")
