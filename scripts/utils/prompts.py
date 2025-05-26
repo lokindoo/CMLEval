@@ -77,12 +77,12 @@ Options:
 Answer:"""
 
 
-EVALUATION_GENQA_SYS_PROMPT = (
+EVALUATION_SFQA_SYS_PROMPT = (
     """You are an expert at answering short-answer questions."""
 )
 
 # default short answer prompt using 1 random English, 1 random Sundanese, and 1 random Arabic example
-EVALUATION_GENQA_PROMPT = """Look at the question, think about it, and write a short answer to it.
+EVALUATION_SFQA_PROMPT = """Look at the question, think about it, and write a short answer to it.
 Write out your thought process, and in the end, put the correct short answer in square brackets: [steak and fries], [كرة القدم], [taman umum], etc.
 Make sure the short answer is in {answer_language} only.
 
@@ -91,7 +91,7 @@ Answer:"""
 
 EVALUATION_SYS_PROMPT_DICT = {
     "MCQA": EVALUATION_MCQA_SYS_PROMPT,
-    "GenQA": EVALUATION_GENQA_SYS_PROMPT,
+    "SFQA": EVALUATION_SFQA_SYS_PROMPT,
 }
 
 EVALUATION_MCQA_PROMPT_DICT = {
@@ -136,7 +136,7 @@ FinalAnswer: D
 Explanation: {explanation}
 FinalAnswer:"""
 
-EXTRACT_GENQA_PROMPT = """You are an expert at extracting a specific short answer from a long explanation. Analyse the explanation given, and select the final answer it comes to.
+EXTRACT_SFQA_PROMPT = """You are an expert at extracting a specific short answer from a long explanation. Analyse the explanation given, and select the final answer it comes to.
 The answer must be a short text enclosed in square brackets [].
 You must write only the answer text, do not write anything else.
 If no answer can be found, write "None".
@@ -150,5 +150,5 @@ FinalAnswer:"""
 
 EXTRACT_PROMPT_DICT = {
     "MCQA": EXTRACT_MCQA_PROMPT,
-    "GenQA": EXTRACT_GENQA_PROMPT,
+    "SFQA": EXTRACT_SFQA_PROMPT,
 }

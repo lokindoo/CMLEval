@@ -16,7 +16,7 @@ from scripts.utils.io import load_checkpoint, save_checkpoint, save_df
 from scripts.utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
 from scripts.utils.parsers import extract_answers_with_llm, extract_answers_with_rules
 from scripts.utils.prompts import (
-    EVALUATION_GENQA_PROMPT,
+    EVALUATION_SFQA_PROMPT,
     EVALUATION_MCQA_PROMPT_DICT,
     create_eval_prompt,
 )
@@ -47,7 +47,7 @@ def evaluate_models(
     if qa_type == "MCQA":
         eval_prompt = EVALUATION_MCQA_PROMPT_DICT[fewshot]
     else:
-        eval_prompt = EVALUATION_GENQA_PROMPT
+        eval_prompt = EVALUATION_SFQA_PROMPT
     logger.info(f"FEWSHOT | {fewshot}-shot")
     logger.info(f"PROMPT |\n{eval_prompt}")
 
@@ -131,8 +131,8 @@ def main(
 
     # TODO: change when using multiple datasets at once
     qa_type = Path(dataset_path).parent.name
-    if qa_type not in ["MCQA", "GenQA"]:
-        raise Exception("Only MCQA and GenQA datasets supported!")
+    if qa_type not in ["MCQA", "SFQA"]:
+        raise Exception("Only MCQA and SFQA datasets supported!")
 
     login(os.getenv("HF_TOKEN"))
     models = []

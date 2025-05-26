@@ -48,7 +48,7 @@ mcqa_patterns = [
     r"(?<=Option )[A-E]",
 ]
 
-genqa_patterns = [r"\[.+?\]"]
+sfqa_patterns = [r"\[.+?\]"]
 
 
 def parse_llm_answer(long_answer: str, patterns: list) -> str:
@@ -67,7 +67,7 @@ def extract_answers_with_rules(results: Dict, qa_type: str) -> Dict:
     if qa_type == "MCQA":
         patterns = mcqa_patterns
     else:
-        patterns = genqa_patterns
+        patterns = sfqa_patterns
     for model in results.keys():
         for d in tqdm(results[model], total=len(results[model]), ncols=100):
             if not d["output"]:
@@ -106,6 +106,3 @@ def extract_answers_with_llm(results: Dict, qa_type: str, test: bool) -> Dict:
                 else:
                     if test:
                         d["extracted_with_llm"] = False
-
-
-# TODO: add parser for GenQA
