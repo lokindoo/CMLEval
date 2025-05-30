@@ -1,10 +1,12 @@
 import logging
+from typing import Optional
 
 import requests
 import torch
 from groq import Groq
 from openai import OpenAI
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
 from scripts.utils.prompts import EVALUATION_SYS_PROMPT_DICT
 
 
@@ -34,8 +36,7 @@ class LocalLLM(BaseLLM):
         bnb_cfg = None
         if quant == "int8":
             bnb_cfg = BitsAndBytesConfig(
-                load_in_8bit=True,
-                llm_int8_enable_fp32_cpu_offload=True
+                load_in_8bit=True, llm_int8_enable_fp32_cpu_offload=True
             )
         elif quant == "int4":
             bnb_cfg = BitsAndBytesConfig(
@@ -88,11 +89,17 @@ class OpenAILLM(BaseLLM):
 
 
 class GroqLLM(BaseLLM):
-    def __init__(self, name: str, api_key: str, qa_type: str):
+    def __init__(
+        self, name: str, api_key: str, qa_type: str, extraction: Optional[bool] = False
+    ):
         super().__init__(name)
         self.model = name
         self.client = Groq(api_key=api_key)
         self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
+        if extraction:
+            self.temperature = 0.5
+        else:
+            self.temperature = 1
 
     def predict(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
@@ -104,6 +111,7 @@ class GroqLLM(BaseLLM):
                 },
                 {"role": "user", "content": prompt},
             ],
+            temperature=self.temperature,
         )
 
         return response.choices[0].message.content

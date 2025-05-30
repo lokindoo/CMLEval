@@ -4,6 +4,7 @@ accelerate
 bitsandbytes
 click
 datasets
+fasttext
 groq
 huggingface_hub
 openai
@@ -12,3 +13,4 @@ python-dotenv
 pyyaml
 transformers
 tqdm
+sentence_transformers

@@ -4,6 +4,7 @@ from typing import Dict, Tuple
 
 from dotenv import load_dotenv
 from tqdm import tqdm
+
 from scripts.utils.model_wrappers import company2wrapper
 from scripts.utils.prompts import EXTRACT_PROMPT_DICT
 
@@ -83,6 +84,7 @@ def extract_answers_with_llm(results: Dict, qa_type: str, test: bool) -> Dict:
         name=EVAL_MODEL,
         api_key=GROQ_API_KEY,
         qa_type=qa_type,
+        extraction=True,
     )
 
     extract_prompt = EXTRACT_PROMPT_DICT[qa_type]
