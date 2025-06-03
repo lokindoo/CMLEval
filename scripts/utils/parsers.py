@@ -1,12 +1,11 @@
 import os
 import re
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from dotenv import load_dotenv
 from tqdm import tqdm
-
-from scripts.utils.model_wrappers import company2wrapper
-from scripts.utils.prompts import EXTRACT_PROMPT_DICT
+from utils.model_wrappers import company2wrapper
+from utils.prompts import EXTRACT_PROMPT_DICT
 
 load_dotenv()
 EVAL_MODEL = os.getenv("EVAL_MODEL")
@@ -58,13 +57,14 @@ def parse_llm_answer(long_answer: str, patterns: list) -> str:
     long_answer = long_answer[part:]
     found = [re.search(p, long_answer) for p in patterns]
     found = [f[0] for f in found if f]
-    final_answer = found[0].strip("[").strip("]") if found else ""
+    final_answer = found[0].strip().strip("[").strip("]") if found else ""
 
     return final_answer
 
 
-# add qa_type
-def extract_answers_with_rules(results: Dict, qa_type: str) -> Dict:
+def extract_answers_with_rules(
+    results: Dict, qa_type: str, force: Optional[bool] = False
+) -> Dict:
     if qa_type == "MCQA":
         patterns = mcqa_patterns
     else:
@@ -74,7 +74,7 @@ def extract_answers_with_rules(results: Dict, qa_type: str) -> Dict:
             if not d["output"]:
                 d["extracted_answer"] = ""
             else:
-                if not d.get("extracted_answer"):
+                if not d.get("extracted_answer") or force:
                     d["extracted_answer"] = parse_llm_answer(d["output"], patterns)
 
 
