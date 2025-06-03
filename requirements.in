@@ -4,7 +4,7 @@ accelerate
 bitsandbytes
 click
 datasets
-fasttext
+fasttext-wheel
 groq
 huggingface_hub
 openai
