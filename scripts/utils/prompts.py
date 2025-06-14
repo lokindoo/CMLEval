@@ -1,19 +1,5 @@
 import pandas as pd
 
-# Sanity check
-SANITY_CHECK_PROMPT = """You are an expert reviewing answers to multiple-choice questions. You have a question and answer options, as well as a potentially correct answer. You need to determine if the marked answer is correct.
-Question: {question}
-Options:
-{options}
-The option {marked_answer} is potentially correct.
-
-First, solve the question independently, then evaluate whether the marked answer (option {marked_answer}) is correct.
-You must use this format:
-
-IndependentAnswer: The option letter you determine is correct
-Evaluation: YES if the marked answer is correct, NO if incorrect
-Explanation: Brief explanation of why"""
-
 # Evaluation
 EVALUATION_MCQA_SYS_PROMPT = (
     """You are an expert at answering multiple-choice questions."""
@@ -102,26 +88,25 @@ EVALUATION_MCQA_PROMPT_DICT = {
 
 
 def create_eval_prompt(row: pd.Series, prompt: str, qa_type: str) -> str:
-    question = row["Question"]
+    question = row["question"]
     if qa_type == "MCQA":
         options = [
-            row["Option A"],
-            row["Option B"],
-            row["Option C"],
-            row["Option D"],
-            row["Option E"],
+            row["option_A"],
+            row["option_B"],
+            row["option_C"],
+            row["option_D"],
+            row["option_E"],
         ]
         options = [o for o in options if o]
         options = "\n".join(
             [f"{chr(65 + i)}. {o}".strip() for i, o in enumerate(options)]
         )
         return prompt.format(question=question, options=options)
-    else:
-        if row["Direction"] == "en_answer":
-            answer_language = "English"
-        else:
-            answer_language = row["Language"]
+    elif qa_type == "SFQA":
+        answer_language = row["answer_language"]
         return prompt.format(question=question, answer_language=answer_language)
+    else:
+        raise Exception(f"Unknown QA type {qa_type}")
 
 
 EXTRACT_MCQA_PROMPT = """You are an expert at extracting a specific final answer from a long explanation. Analyse the explanation given, and select the final answer it comes to.

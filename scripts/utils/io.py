@@ -1,4 +1,5 @@
 import json
+import os
 import pickle
 from pathlib import Path
 from typing import Dict, Tuple
@@ -29,6 +30,16 @@ def save_checkpoint(results: Dict, output_file: str, last_idx: int):
         pickle.dump(results, h, protocol=pickle.HIGHEST_PROTOCOL)
     with open(idx_file, "w") as f:
         f.write(str(last_idx))
+
+
+def delete_checkpoint(output_file: str) -> Tuple:
+    """Deletes the checkpointed results_dict and last_processed_index if present."""
+    output_file = output_file.split(".")[0]
+    pkl = Path(output_file).with_suffix(".checkpoint.pickle")
+    idx_file = Path(output_file).with_suffix(".checkpoint.idx")
+    if pkl.exists() and idx_file.exists():
+        os.remove(pkl)
+        os.remove(idx_file)
 
 
 def save_df(dataframe: pd.DataFrame, path: str):
