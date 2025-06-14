@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import time
@@ -11,13 +10,19 @@ import yaml
 from dotenv import load_dotenv
 from huggingface_hub import login
 from tqdm import tqdm
+
 from scripts.utils.dataframe_utils import dict_to_df
-from scripts.utils.io import load_checkpoint, save_checkpoint, save_df
+from scripts.utils.io import (
+    delete_checkpoint,
+    load_checkpoint,
+    save_checkpoint,
+    save_df,
+)
 from scripts.utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
 from scripts.utils.parsers import extract_answers_with_llm, extract_answers_with_rules
 from scripts.utils.prompts import (
-    EVALUATION_SFQA_PROMPT,
     EVALUATION_MCQA_PROMPT_DICT,
+    EVALUATION_SFQA_PROMPT,
     create_eval_prompt,
 )
 
@@ -43,7 +48,7 @@ def evaluate_models(
     qa_type: str,
     output_file: str,
     start_index: int,
-) -> Dict:
+) -> None:
     if qa_type == "MCQA":
         eval_prompt = EVALUATION_MCQA_PROMPT_DICT[fewshot]
     else:
@@ -79,8 +84,8 @@ def evaluate_models(
                 {
                     "output": output,
                     "ground_truth": sample["ground_truth"],
-                    "Language": sample["Language"],
-                    "Direction": sample["Direction"],
+                    "question_language": sample["question_language"],
+                    "answer_language": sample["answer_language"],
                     "prompt": prompt,
                 }
             )
@@ -90,14 +95,6 @@ def evaluate_models(
 
 
 @click.command()
-@click.option(
-    "--dataset-path",
-    required=True,
-    help="Parquet file containing the dataset to be used for testing.",
-)
-@click.option(
-    "--output-file", required=True, help="JSON file to save model evaluation results."
-)
 @click.option(
     "--config-path",
     required=True,
@@ -114,8 +111,6 @@ def evaluate_models(
     "--test", is_flag=True, default=False, help="Enable developer testing capabilities."
 )
 def main(
-    dataset_path: str,
-    output_file: str,
     config_path: str,
     llm_answer_extract: Optional[bool],
     fewshot: str,
@@ -129,12 +124,8 @@ def main(
             "No models indicated. Check the config file and re-run script with at least 1 model."
         )
 
-    # TODO: change when using multiple datasets at once
-    qa_type = Path(dataset_path).parent.name
-    if qa_type not in ["MCQA", "SFQA"]:
-        raise Exception("Only MCQA and SFQA datasets supported!")
-
-    login(os.getenv("HF_TOKEN"))
+    if [m for m in config if m.get("model_cache_path")]:
+        login(os.getenv("HF_TOKEN"))
     models = []
     for model_dict in config:
         logger.info(f"LOADING | {model_dict.get('name')}")
@@ -158,38 +149,44 @@ def main(
                 )
             )
 
-    # TODO: add interaction with several datasets at once
-    logger.info(f"DATASET | {Path(dataset_path).with_suffix("").stem}")
-    results, start_idx = load_checkpoint(output_file)
-    if results is None:
-        results = {m.name: [] for m in models}
-    else:
-        logger.info(f"RESUMING FROM | {start_idx}")
+    path = Path(*Path(".").absolute().parts[:-2] + ("data",))
+    for filepath in path.glob("**/*.parquet"):
+        qa_type = filepath.parts[-2]
+        logger.info(f"DATASET | {filepath.name.split(".")[0]} | {qa_type}")
+        output_file = Path(
+            *Path(".").absolute().parts[:-2] + ("results", qa_type, filepath.name)
+        )
+        results, start_idx = load_checkpoint(output_file)
+        if results is None:
+            results = {m.name: [] for m in models}
+        else:
+            logger.info(f"RESUMING FROM | {start_idx}")
 
-    df = pd.read_parquet(dataset_path)
-    df = df.iloc[start_idx:].reset_index(drop=True)
+        df = pd.read_parquet(filepath)
+        df = df.iloc[start_idx:].reset_index(drop=True)
 
-    evaluate_models(df, models, results, fewshot, qa_type, output_file, start_idx)
-    logger.info("Extracting final option from LLM output using rules.")
-    # TODO: re-write to work with df instead of dict
-    extract_answers_with_rules(results, qa_type)
-
-    save_df(
-        dict_to_df(results),
-        output_file,
-    )
-
-    if llm_answer_extract:
-        logger.info("Extracting final option from LLM output using LLM.")
-        # TODO: re-write to work with df instead of dict
-        extract_answers_with_llm(results, qa_type, test)
+        evaluate_models(df, models, results, fewshot, qa_type, output_file, start_idx)
+        logger.info("Extracting final option from LLM output using rules.")
+        results = dict_to_df(results)
+        results = extract_answers_with_rules(results, qa_type)
 
         save_df(
-            dict_to_df(results),
+            results,
             output_file,
         )
 
-    # TODO: delete idx and checkpoint after everything is done and saved
+        if llm_answer_extract:
+            logger.info("Extracting final option from LLM output using LLM.")
+            results = extract_answers_with_llm(results, qa_type, test)
+
+            save_df(
+                results,
+                output_file,
+            )
+
+        # TODO: add metric calculations based on qa_type
+
+        delete_checkpoint(output_file)
 
 
 if __name__ == "__main__":
