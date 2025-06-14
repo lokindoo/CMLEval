@@ -134,7 +134,7 @@ def main(
             models.append(
                 LocalLLM(
                     full_name=model_dict.get("name"),
-                    cache_path=Path(*Path(".").absolute().parts[:-2] + (cache_folder,)),
+                    cache_path=Path(*Path(".").absolute().parts[:-2]) / cache_folder,
                     qa_type=qa_type,
                 )
             )
@@ -150,12 +150,12 @@ def main(
                 )
             )
 
-    path = Path(*Path(".").absolute().parts[:-2] + ("data",))
+    path = Path(*Path(".").absolute().parts[:-2]) / "data"
     for filepath in path.glob("**/*.parquet"):
         qa_type = filepath.parts[-2]
         logger.info(f"DATASET | {filepath.name.split(".")[0]} | {qa_type}")
-        output_file = Path(
-            *Path(".").absolute().parts[:-2] + ("results", qa_type, filepath.name)
+        output_file = (
+            Path(*Path(".").absolute().parts[:-2]) / "results" / qa_type / filepath.name
         )
         results, start_idx = load_checkpoint(output_file)
         if results is None:
