@@ -5,29 +5,14 @@
 # - model cache path if the model is to be run locally
 
 - name: llama3-8b-8192
-  api_key: GROQ_KEY
-  model_cache_path: 
-
-- name: llama3-70b-8192
-  api_key: GROQ_KEY
-  model_cache_path: 
-
-- name: qwen-qwq-32b
-  api_key: GROQ_KEY
-  model_cache_path: 
-
-- name: gemma2-9b-it
-  api_key: GROQ_KEY
+  api_key: GROQ_API_KEY
   model_cache_path: 
 
 - name: deepseek-r1-distill-llama-70b
-  api_key: GROQ_KEY
+  api_key: GROQ_API_KEY
   model_cache_path: 
 
-- name: mistral-saba-24b
-  api_key: GROQ_KEY
-  model_cache_path: 
+- name: neulab/Pangea-7B
+  api_key: 
+  model_cache_path: "models"
 
-# - name: neulab/Pangea-7B
-#   api_key: 
-#   model_cache_path: C:\Users\nikol\OneDrive\Desktop\project_repos\CMLEval\models

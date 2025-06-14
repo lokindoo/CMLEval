@@ -129,11 +129,11 @@ def main(
     models = []
     for model_dict in config:
         logger.info(f"LOADING | {model_dict.get('name')}")
-        if cache_path := model_dict.get("model_cache_path"):
+        if cache_folder := model_dict.get("model_cache_path"):
             models.append(
                 LocalLLM(
                     full_name=model_dict.get("name"),
-                    cache_path=cache_path,
+                    cache_path=Path(*Path(".").absolute().parts[:-2] + (cache_folder,)),
                     qa_type=qa_type,
                 )
             )
