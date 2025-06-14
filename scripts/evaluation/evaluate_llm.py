@@ -18,6 +18,7 @@ from scripts.utils.io import (
     save_checkpoint,
     save_df,
 )
+from scripts.utils.metrics import get_exact_match, get_lass
 from scripts.utils.model_wrappers import BaseLLM, LocalLLM, company2wrapper
 from scripts.utils.parsers import extract_answers_with_llm, extract_answers_with_rules
 from scripts.utils.prompts import (
@@ -185,6 +186,16 @@ def main(
             )
 
         # TODO: add metric calculations based on qa_type
+
+        if qa_type == "MCQA":
+            results = get_exact_match(results)
+        elif qa_type == "SFQA":
+            results = get_lass(results)
+
+        save_df(
+            results,
+            output_file,
+        )
 
         delete_checkpoint(output_file)
 

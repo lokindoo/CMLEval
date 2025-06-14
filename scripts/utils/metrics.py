@@ -93,11 +93,21 @@ def batch_lass(
 
 def get_lass(dataframe: pd.DataFrame) -> List[str]:
     """Calculates the LASS metric for SFQA."""
-    logger.info(f"Begin LASS calculation, len dataframe: {len(dataframe)}")
+    logger.info(
+        f"Begin LASS calculation, len dataframe: {len(dataframe)}. Est. time: {len(dataframe) // 29} seconds"
+    )
     scores = batch_lass(
         preds=dataframe["extracted_answer"],
         target_lists=dataframe["ground_truth"],
         target_langs=dataframe["answer_language"],
     )
     dataframe["LASS"] = scores
+    return dataframe
+
+
+def get_exact_match(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """Calculates the Exact Match metric for MCQA."""
+    dataframe["EM"] = dataframe.apply(
+        lambda row: row["extracted_answer"] == row["ground_truth"], axis=1
+    )
     return dataframe
