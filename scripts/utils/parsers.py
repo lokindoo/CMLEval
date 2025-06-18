@@ -10,7 +10,7 @@ from utils.model_wrappers import company2wrapper
 from utils.prompts import EXTRACT_PROMPT_DICT
 
 load_dotenv()
-EVAL_MODEL = os.getenv("EVAL_MODEL")
+EXTRACT_MODEL = os.getenv("EXTRACT_MODEL")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 mcqa_patterns = [
@@ -81,7 +81,7 @@ def extract_answers_with_llm(
 ) -> pd.DataFrame:
     api_wrapper = company2wrapper.get("GROQ")
     extractor = api_wrapper(
-        name=EVAL_MODEL,
+        name=EXTRACT_MODEL,
         api_key=GROQ_API_KEY,
         qa_type=qa_type,
         extraction=True,

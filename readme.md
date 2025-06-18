@@ -2,31 +2,25 @@
 
 This is a repository for the "Evaluating the cross- and multi-lingual capabilities of Large Language Models (LLM)" paper.
 
-# Current progress
+# Setup
 
-So far, I have outlined the main evaluation methods, and have chosen several methods which could be used to evaluate the LLMs. 
-
-The main methods are:
-- Multiple Choice Question Answering (MCQA)
-- Correct Phrase Continuation (CPC)
-
-Other open-ended generation like Slot Filling may be used, but more preparation is needed.
-Generally, the methods will be combined with language augmentation techniques to create several versions of each task sample:
-(MCQA)
-- English question - X answers
-- X question - English answers
-- Mixed answers
-- X correct answer
-
-The main metrics to evaluate each method are: 
-- MCQA - Precision, Accuracy, Cohen's Kappa 
-- CoCo-CoLa, Cossim / Cross-lingual Consistency 
-
-The evaluation prompt so far has included CoT based on the intuition that CoT generally improves results. Tests without CoT need to be conducted to prove this theory in the cross- multilingual context.
+Before evaluating LLMs, create a virtual environment and run `pip install -r requirements.txt`.
+Create config.yaml and .env files based on the provided example files.
 
 # Running evaluations
 
-To run LLM evaluations, install requirements, create a config.yaml file based on the example file, and run the `evaluate_llm.py` script with the following command in the root directory:
+To run LLM evaluations use the `evaluate_llm.py` script with the following command from the root directory:
 ```
-python -m scripts.evaluation.evaluate_llm --dataset-path "path\to\dataset.parquet.gzip" --output-file "path\to\output.json" --config-path "path\to\config.yaml"
+python -m scripts.evaluation.evaluate_llm --config-path "path\to\config.yaml"
 ```
+
+If needed, zero-shot prompting can be added, and the automatic LLM answer parsing module can be disconnected by adding the corresponding flags to the run command.
+
+# Visualization
+
+To view the LLM evaluation results in a convenient format, run the following command from the root directory:
+```
+streamlit run scripts\visualisation\dashboard.py
+```
+
+The streamlit app can be used to get a general impression of the metrics, as well as to compare how some models did against others, and see how each model performed in each language separately.

@@ -94,10 +94,10 @@ class GroqLLM(BaseLLM):
         super().__init__(name)
         self.model = name
         self.client = Groq(api_key=api_key)
-        self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
         if extraction:
             self.temperature = 0.5
         else:
+            self.sys_prompt = EVALUATION_SYS_PROMPT_DICT[qa_type]
             self.temperature = 1
 
     def predict(self, prompt: str) -> str:
